@@ -2,19 +2,57 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<title>テンキーでドン・カッ（キー割り当て変更版）</title>
+<title>テンキーでドン・カッ（音量調整＋画面ボタン付き）</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <style>
-  body { font-family: sans-serif; padding: 1em; }
-  #status { margin-bottom: 1em; }
+  body {
+    font-family: sans-serif;
+    padding: 1em;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    user-select: none;
+  }
+  #status {
+    margin-bottom: 1em;
+  }
+  .button-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 80px);
+    grid-template-rows: repeat(2, 80px);
+    gap: 20px;
+    touch-action: manipulation;
+  }
+  button {
+    font-size: 28px;
+    border-radius: 12px;
+    border: 2px solid #333;
+    background-color: #eee;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: 0 3px 5px rgba(0,0,0,0.2);
+    transition: background-color 0.15s ease;
+  }
+  button:active {
+    background-color: #ccc;
+  }
 </style>
 </head>
 <body>
 
-<h1>テンキーでドン・カッを鳴らす（キー割り当て変更）</h1>
-<p>キー1, 2 → don.wav（ドン）</p>
-<p>キー4, 5 → kat.wav（カッ）</p>
-<p>連打制御（100ms間隔）あり</p>
+<h1>テンキーでドン・カッを鳴らす</h1>
+<p>キー1, 2 → ドン（音量小さめ）</p>
+<p>キー4, 5 → カッ（音量小さめ）</p>
 <div id="status">準備中...</div>
+
+<div class="button-grid">
+  <button data-key="Numpad1">1</button>
+  <button data-key="Numpad2">2</button>
+  <button data-key="Numpad4">4</button>
+  <button data-key="Numpad5">5</button>
+</div>
 
 <script src="./posmp.js"></script>
 <script>
@@ -26,45 +64,84 @@
   try {
     samplerDon = await new posmp("./don.wav");
     samplerKat = await new posmp("./kat.wav");
-    statusDiv.textContent = "音源ロード完了。キーで再生できます。";
+    statusDiv.textContent = "音源ロード完了。キーまたはボタンで再生できます。";
   } catch(e) {
     statusDiv.textContent = "音源の読み込みに失敗しました。";
     console.error(e);
     return;
   }
 
+  // 音量調整用GainNodeを作成
+  const ctx = samplerDon.audioCtx;
+  const gainDon = ctx.createGain();
+  const gainKat = ctx.createGain();
+  gainDon.gain.value = 0.3; // 音量30%に設定（調整可）
+  gainKat.gain.value = 0.3;
+
+  // posmpのplayを修正してGainNodeを経由して再生させるヘルパー関数
+  function playWithGain(sampler, gainNode) {
+    if (!sampler) return;
+    const source = sampler.audioCtx.createBufferSource();
+    source.buffer = sampler.audioBuffer; // posmp.jsでaudioBufferが公開されている想定
+    source.connect(gainNode);
+    gainNode.connect(sampler.audioCtx.destination);
+    source.start(0);
+  }
+
   async function resumeAudioContext() {
-    if(samplerDon && samplerDon.audioCtx && samplerDon.audioCtx.state === "suspended") {
-      await samplerDon.audioCtx.resume();
+    if(ctx.state === "suspended") {
+      await ctx.resume();
       console.log("AudioContext resumed");
     }
   }
 
-  // ドンに割り当てるキーコード配列
+  // キー割り当て配列
   const donKeys = ["Numpad1", "Numpad2"];
-  // カッに割り当てるキーコード配列
   const katKeys = ["Numpad4", "Numpad5"];
 
   let lastKey = null;
   let lastTime = 0;
-  const debounceMs = 100; // 100ms以内の連続同キーは無視
+  const debounceMs = 100;
 
+  // キーボード操作
   window.addEventListener("keydown", async (e) => {
     const now = Date.now();
-    if (e.code === lastKey && (now - lastTime) < debounceMs) {
-      // 連打制御で無視
-      return;
-    }
+    if (e.code === lastKey && (now - lastTime) < debounceMs) return;
     lastKey = e.code;
     lastTime = now;
 
     await resumeAudioContext();
 
     if (donKeys.includes(e.code)) {
-      samplerDon.play();
+      playWithGain(samplerDon, gainDon);
     } else if (katKeys.includes(e.code)) {
-      samplerKat.play();
+      playWithGain(samplerKat, gainKat);
     }
+  });
+
+  // 画面ボタン操作
+  const buttons = document.querySelectorAll("button[data-key]");
+  buttons.forEach(btn => {
+    btn.addEventListener("touchstart", async e => {
+      e.preventDefault();
+      await resumeAudioContext();
+      const key = btn.getAttribute("data-key");
+      if (donKeys.includes(key)) {
+        playWithGain(samplerDon, gainDon);
+      } else if (katKeys.includes(key)) {
+        playWithGain(samplerKat, gainKat);
+      }
+    });
+    btn.addEventListener("mousedown", async e => {
+      e.preventDefault();
+      await resumeAudioContext();
+      const key = btn.getAttribute("data-key");
+      if (donKeys.includes(key)) {
+        playWithGain(samplerDon, gainDon);
+      } else if (katKeys.includes(key)) {
+        playWithGain(samplerKat, gainKat);
+      }
+    });
   });
 })();
 </script>
