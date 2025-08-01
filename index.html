@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<title>テンキーでドン・カッ（ボタン追加＋音量調整）</title>
+<title>テンキーでドン・カッ（配置調整版）</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <style>
   body {
@@ -50,10 +50,10 @@
 <div id="status">準備中...</div>
 
 <div class="button-grid">
-  <button data-key="Numpad1">1</button>
-  <button data-key="Numpad2">2</button>
-  <button data-key="Numpad4">4</button>
-  <button data-key="Numpad5">5</button>
+  <button data-key="Numpad4">カッ</button>
+  <button data-key="Numpad5">カッ</button>
+  <button data-key="Numpad1">ドン</button>
+  <button data-key="Numpad2">ドン</button>
 </div>
 
 <script src="./posmp.js"></script>
@@ -92,7 +92,6 @@
   let lastTime = 0;
   const debounceMs = 100;
 
-  // キーボード処理
   window.addEventListener("keydown", async (e) => {
     const now = Date.now();
     if(e.code === lastKey && (now - lastTime) < debounceMs) return;
@@ -108,7 +107,6 @@
     }
   });
 
-  // ボタン処理
   const buttons = document.querySelectorAll("button[data-key]");
   buttons.forEach(btn => {
     btn.addEventListener("touchstart", async e => {
