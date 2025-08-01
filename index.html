@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<title>テンキーでドン・カッ（音声ファイル再生）</title>
+<title>テンキーでドン・カッ（連打制御付き）</title>
 <style>
   body { font-family: sans-serif; padding: 1em; }
   #status { margin-bottom: 1em; }
@@ -11,9 +11,9 @@
 <body>
 
 <h1>テンキーでドン・カッを鳴らす</h1>
-<p>テンキー0 → don.wav</p>
+<p>テンキー0, 00, 000 → don.wav</p>
 <p>テンキー1～9 → kat.wav</p>
-<p>連打で重ねて鳴ります</p>
+<p>連打制御（100ms間隔）あり</p>
 <div id="status">準備中...</div>
 
 <script src="./posmp.js"></script>
@@ -24,7 +24,6 @@
   let samplerKat = null;
 
   try {
-    // don.wav, kat.wav を明示的に読み込み
     samplerDon = await new posmp("./don.wav");
     samplerKat = await new posmp("./kat.wav");
     statusDiv.textContent = "音源ロード完了。テンキーで再生できます。";
@@ -34,7 +33,6 @@
     return;
   }
 
-  // AudioContextの自動再生制限対策
   async function resumeAudioContext() {
     if(samplerDon && samplerDon.audioCtx && samplerDon.audioCtx.state === "suspended") {
       await samplerDon.audioCtx.resume();
@@ -42,12 +40,25 @@
     }
   }
 
+  const donKeys = ["Numpad0", "Numpad00", "Numpad000"];
+  let lastKey = null;
+  let lastTime = 0;
+  const debounceMs = 100; // 100ms以内の連続同キーは無視
+
   window.addEventListener("keydown", async (e) => {
+    const now = Date.now();
+    if (e.code === lastKey && (now - lastTime) < debounceMs) {
+      // 連打制御で無視
+      return;
+    }
+    lastKey = e.code;
+    lastTime = now;
+
     await resumeAudioContext();
 
-    if(e.code === "Numpad0") {
+    if (donKeys.includes(e.code)) {
       samplerDon.play();
-    } else if(/Numpad[1-9]/.test(e.code)) {
+    } else if (/Numpad[1-9]/.test(e.code)) {
       samplerKat.play();
     }
   });
