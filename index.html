@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<title>テンキーでドン・カッ（連打制御付き）</title>
+<title>テンキーでドン・カッ（キー割り当て変更版）</title>
 <style>
   body { font-family: sans-serif; padding: 1em; }
   #status { margin-bottom: 1em; }
@@ -10,9 +10,9 @@
 </head>
 <body>
 
-<h1>テンキーでドン・カッを鳴らす</h1>
-<p>テンキー0, 00, 000 → don.wav</p>
-<p>テンキー1～9 → kat.wav</p>
+<h1>テンキーでドン・カッを鳴らす（キー割り当て変更）</h1>
+<p>キー1, 2 → don.wav（ドン）</p>
+<p>キー4, 5 → kat.wav（カッ）</p>
 <p>連打制御（100ms間隔）あり</p>
 <div id="status">準備中...</div>
 
@@ -26,7 +26,7 @@
   try {
     samplerDon = await new posmp("./don.wav");
     samplerKat = await new posmp("./kat.wav");
-    statusDiv.textContent = "音源ロード完了。テンキーで再生できます。";
+    statusDiv.textContent = "音源ロード完了。キーで再生できます。";
   } catch(e) {
     statusDiv.textContent = "音源の読み込みに失敗しました。";
     console.error(e);
@@ -40,7 +40,11 @@
     }
   }
 
-  const donKeys = ["Numpad0", "Numpad00", "Numpad000"];
+  // ドンに割り当てるキーコード配列
+  const donKeys = ["Numpad1", "Numpad2"];
+  // カッに割り当てるキーコード配列
+  const katKeys = ["Numpad4", "Numpad5"];
+
   let lastKey = null;
   let lastTime = 0;
   const debounceMs = 100; // 100ms以内の連続同キーは無視
@@ -58,7 +62,7 @@
 
     if (donKeys.includes(e.code)) {
       samplerDon.play();
-    } else if (/Numpad[1-9]/.test(e.code)) {
+    } else if (katKeys.includes(e.code)) {
       samplerKat.play();
     }
   });
