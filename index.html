@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>テンキーでWeb MIDIパーカッション</title>
+<style>
+  body { font-family: sans-serif; padding: 1em; }
+  #status { margin-bottom: 1em; }
+</style>
+</head>
+<body>
+  <h1>テンキーでWeb MIDIパーカッション</h1>
+  <p>テンキー0 → ドン（バスドラム）</p>
+  <p>テンキー1～9 → カッ（スネア）</p>
+  <p>連打でも重ねて鳴ります</p>
+  <div id="status">MIDI機器接続待ち...</div>
+
+<script>
+(async () => {
+  const statusDiv = document.getElementById("status");
+  let midiAccess = null;
+  let midiOutput = null;
+
+  // MIDIアクセス開始
+  try {
+    midiAccess = await navigator.requestMIDIAccess();
+    const outputs = Array.from(midiAccess.outputs.values());
+    if(outputs.length === 0) {
+      statusDiv.textContent = "MIDI出力機器が見つかりません。MIDI音源ソフトや機器を接続してください。";
+      return;
+    }
+    midiOutput = outputs[0];
+    statusDiv.textContent = `MIDI出力機器接続: ${midiOutput.name}`;
+  } catch(err) {
+    statusDiv.textContent = "Web MIDI APIがサポートされていないか、許可されていません。";
+    console.error(err);
+    return;
+  }
+
+  // ノートON/OFF送信関数
+  function sendNote(note, velocity = 127, duration = 150) {
+    if(!midiOutput) return;
+    const channel = 9; // MIDIチャンネル10は0始まりで9
+    const noteOn = 0x90 | channel;
+    const noteOff = 0x80 | channel;
+    midiOutput.send([noteOn, note, velocity]);
+    setTimeout(() => {
+      midiOutput.send([noteOff, note, 0]);
+    }, duration);
+  }
+
+  // キーコード判定＆再生
+  window.addEventListener("keydown", e => {
+    // 連打も考慮して発音キューはなし、直接送信
+    // テンキーかどうかはe.codeで判別
+    if(e.code === "Numpad0") {
+      // ドン (バスドラム) ノート35
+      sendNote(35);
+    } else if (/Numpad[1-9]/.test(e.code)) {
+      // カッ (スネア) ノート38
+      sendNote(38);
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
