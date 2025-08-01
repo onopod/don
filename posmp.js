@@ -31,7 +31,7 @@ posmp.prototype = {
       window.AudioContext = window.AudioContext||window.webkitAudioContext;
       this.audioctx = new AudioContext();
       this.gain = this.audioctx.createGain();
-      this.gain.gain.value = 0;
+      this.gain.gain.value = 0;  // 初期音量は0
       this.gain.connect(this.audioctx.destination);
       this.buffer = null;
       if(src != null){
@@ -98,7 +98,7 @@ posmp.prototype = {
         }
       }
       src.buffer = this.buffer;
-      src.connect(this.audioctx.destination);
+      src.connect(this.gain);  // ここを変更：gain経由に接続
       src.start();
     }
   },
