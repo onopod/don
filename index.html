@@ -1,39 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<title>テンキーでドンカッ（pomidi & posmp）</title>
+<style>
+  body { font-family: sans-serif; padding: 1em; }
+  #status { margin-bottom: 1em; }
+</style>
+</head>
+<body>
+
+<h1>テンキーでドン・カッを鳴らす</h1>
+<p>テンキー0 → ドン（MIDIノート35 + サンプル再生）</p>
+<p>テンキー1～9 → カッ（MIDIノート38 + サンプル再生）</p>
+<p>連打で重ねて鳴ります</p>
+<div id="status">MIDI機器接続待ち...</div>
+
 <script src="./pomidi.js"></script>
 <script src="./posmp.js"></script>
 <script>
 (async () => {
+  const statusDiv = document.getElementById("status");
   let midi = null;
   let sampler = null;
 
   try {
     midi = await new pomidi();
-    midi.setHandler((e) => {
-      // MIDI入力イベント処理は不要なら空でOK
-    });
-  } catch(e) {
-    console.error("MIDI初期化失敗", e);
+    midi.setHandler(() => {}); // MIDI入力イベントの処理（今回は使わない）
+    statusDiv.textContent = "MIDI接続成功";
+  } catch (e) {
+    statusDiv.textContent = "Web MIDI API非対応または許可なし";
+    console.error(e);
   }
 
-  // posmp はファイル指定なしでインスタンス生成だけ（内部音源利用想定）
+  // posmp をファイル指定なしで初期化（内部プリセット利用想定）
   sampler = await new posmp();
 
   function playDon() {
-    if(midi) midi.sendNoteOn(35);
-    if(sampler) sampler.playDon ? sampler.playDon() : sampler.play();
-  }
-  function playKat() {
-    if(midi) midi.sendNoteOn(38);
-    if(sampler) sampler.playKat ? sampler.playKat() : sampler.play();
-  }
-
-  window.addEventListener("keydown", e => {
-    // 音声初期化解除のためのresumeはpomidi/posmp内部で管理されている想定
-
-    if(e.code === "Numpad0") {
-      playDon();
-    } else if (/Numpad[1-9]/.test(e.code)) {
-      playKat();
+    if (midi) midi.sendNoteOn(35); // バスドラム
+    if (sampler) {
+      // AudioContextの状態がsuspendedならresumeを要求（ここはキー押下時に行う）
+      if (sampler.audioCtx && sampler.audioCtx.state === "suspended") {
+        sampler.audioCtx.resume().then(() => {
+          sampler.playDon ? sampler.playDon() : sampler.play();
+        });
+      } else {
+        sampler.playDon ? sampler.playDon() : sampler.play();
+      }
     }
-  });
-})();
-</script>
+  }
+
+  function playKat() {
+    if (midi) midi.sendNoteOn(38); // スネア
+    if (sampler) {
+      if (sampler.audioCtx && sampler.audioCtx.state === "suspended") {
+        sampler.audioCtx.resume().then(() => {
+          sampler.playKat ? sampler.pla
