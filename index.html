@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8" />
-<title>テンキーでドンカッ（pomidi & posmp）</title>
+<title>テンキーでドン・カッ（音声ファイル再生）</title>
 <style>
   body { font-family: sans-serif; padding: 1em; }
   #status { margin-bottom: 1em; }
@@ -11,48 +11,48 @@
 <body>
 
 <h1>テンキーでドン・カッを鳴らす</h1>
-<p>テンキー0 → ドン（MIDIノート35 + サンプル再生）</p>
-<p>テンキー1～9 → カッ（MIDIノート38 + サンプル再生）</p>
+<p>テンキー0 → don.wav</p>
+<p>テンキー1～9 → kat.wav</p>
 <p>連打で重ねて鳴ります</p>
-<div id="status">MIDI機器接続待ち...</div>
+<div id="status">準備中...</div>
 
-<script src="./pomidi.js"></script>
 <script src="./posmp.js"></script>
 <script>
 (async () => {
   const statusDiv = document.getElementById("status");
-  let midi = null;
-  let sampler = null;
+  let samplerDon = null;
+  let samplerKat = null;
 
   try {
-    midi = await new pomidi();
-    midi.setHandler(() => {}); // MIDI入力イベントの処理（今回は使わない）
-    statusDiv.textContent = "MIDI接続成功";
-  } catch (e) {
-    statusDiv.textContent = "Web MIDI API非対応または許可なし";
+    // don.wav, kat.wav を明示的に読み込み
+    samplerDon = await new posmp("./don.wav");
+    samplerKat = await new posmp("./kat.wav");
+    statusDiv.textContent = "音源ロード完了。テンキーで再生できます。";
+  } catch(e) {
+    statusDiv.textContent = "音源の読み込みに失敗しました。";
     console.error(e);
+    return;
   }
 
-  // posmp をファイル指定なしで初期化（内部プリセット利用想定）
-  sampler = await new posmp();
-
-  function playDon() {
-    if (midi) midi.sendNoteOn(35); // バスドラム
-    if (sampler) {
-      // AudioContextの状態がsuspendedならresumeを要求（ここはキー押下時に行う）
-      if (sampler.audioCtx && sampler.audioCtx.state === "suspended") {
-        sampler.audioCtx.resume().then(() => {
-          sampler.playDon ? sampler.playDon() : sampler.play();
-        });
-      } else {
-        sampler.playDon ? sampler.playDon() : sampler.play();
-      }
+  // AudioContextの自動再生制限対策
+  async function resumeAudioContext() {
+    if(samplerDon && samplerDon.audioCtx && samplerDon.audioCtx.state === "suspended") {
+      await samplerDon.audioCtx.resume();
+      console.log("AudioContext resumed");
     }
   }
 
-  function playKat() {
-    if (midi) midi.sendNoteOn(38); // スネア
-    if (sampler) {
-      if (sampler.audioCtx && sampler.audioCtx.state === "suspended") {
-        sampler.audioCtx.resume().then(() => {
-          sampler.playKat ? sampler.pla
+  window.addEventListener("keydown", async (e) => {
+    await resumeAudioContext();
+
+    if(e.code === "Numpad0") {
+      samplerDon.play();
+    } else if(/Numpad[1-9]/.test(e.code)) {
+      samplerKat.play();
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
